@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Psychology
@@ -35,10 +34,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,8 +50,8 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onNavigateToAbout: () -> Unit
 ) {
-    var isDarkMode by remember { mutableStateOf(false) }
-    var isAutoRecordEnabled by remember { mutableStateOf(false) }
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
+    val isAutoRecordEnabled by viewModel.isAutoRecordEnabled.collectAsState()
 
     Scaffold(
         topBar = {
@@ -96,7 +93,7 @@ fun SettingsScreen(
                     title = "自动记账服务",
                     subtitle = "自动识别微信、支付宝付款",
                     checked = isAutoRecordEnabled,
-                    onCheckedChange = { isAutoRecordEnabled = it }
+                    onCheckedChange = { viewModel.setAutoRecordEnabled(it) }
                 )
             }
 
@@ -119,7 +116,7 @@ fun SettingsScreen(
                     title = "深色模式",
                     subtitle = "切换深色/浅色主题",
                     checked = isDarkMode,
-                    onCheckedChange = { isDarkMode = it }
+                    onCheckedChange = { viewModel.setDarkMode(it) }
                 )
             }
 
