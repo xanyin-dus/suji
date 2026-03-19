@@ -1,0 +1,6 @@
+-keep class com.suji.accountbook.data.local.entity.** { *; }
+-keep class com.suji.accountbook.data.local.dao.** { *; }
+-keep class com.itextpdf.** { *; }
+-keep class com.github.mikephil.charting.** { *; }
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
