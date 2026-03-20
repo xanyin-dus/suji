@@ -1,5 +1,10 @@
 package com.suji.accountbook.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,12 +22,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SettingsAccessibility
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -38,9 +47,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.suji.accountbook.R
+import com.suji.accountbook.service.AutoRecordService
+import com.suji.accountbook.ui.theme.ExpenseColor
+import com.suji.accountbook.ui.theme.IncomeColor
 import com.suji.accountbook.ui.theme.PrimaryLight
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +70,8 @@ fun SettingsScreen(
 ) {
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     val isAutoRecordEnabled by viewModel.isAutoRecordEnabled.collectAsState()
+    val context = LocalContext.current
+    val isAccessibilityEnabled = isAccessibilityServiceEnabled(context)
 
     Scaffold(
         topBar = {
@@ -89,12 +108,13 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             SettingsSection(title = "自动记账") {
-                SettingsItemWithSwitch(
-                    icon = Icons.Default.SettingsAccessibility,
-                    title = "自动记账服务",
-                    subtitle = "自动识别微信、支付宝付款",
-                    checked = isAutoRecordEnabled,
-                    onCheckedChange = { viewModel.setAutoRecordEnabled(it) }
+                AutoRecordSettingsItem(
+                    isAutoRecordEnabled = isAutoRecordEnabled,
+                    isAccessibilityEnabled = isAccessibilityEnabled,
+                    onToggleAutoRecord = { viewModel.setAutoRecordEnabled(it) },
+                    onOpenAccessibilitySettings = {
+                        context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }
                 )
             }
 
@@ -153,6 +173,121 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+@Composable
+private fun AutoRecordSettingsItem(
+    isAutoRecordEnabled: Boolean,
+    isAccessibilityEnabled: Boolean,
+    onToggleAutoRecord: (Boolean) -> Unit,
+    onOpenAccessibilitySettings: () -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.SettingsAccessibility,
+                contentDescription = null,
+                tint = PrimaryLight,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "自动记账服务",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = "自动识别微信、支付宝付款",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+
+            Switch(
+                checked = isAutoRecordEnabled && isAccessibilityEnabled,
+                onCheckedChange = { enabled ->
+                    if (enabled && !isAccessibilityEnabled) {
+                        onOpenAccessibilitySettings()
+                    } else {
+                        onToggleAutoRecord(enabled)
+                    }
+                }
+            )
+        }
+
+        if (isAutoRecordEnabled && !isAccessibilityEnabled) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ExpenseColor.copy(alpha = 0.1f))
+                    .clickable { onOpenAccessibilitySettings() }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = ExpenseColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "请先开启无障碍服务权限",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ExpenseColor,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onOpenAccessibilitySettings) {
+                    Text("去开启", color = ExpenseColor)
+                }
+            }
+        } else if (isAutoRecordEnabled && isAccessibilityEnabled) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(IncomeColor.copy(alpha = 0.1f))
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = IncomeColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "自动记账服务已开启，正在监听支付信息",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = IncomeColor
+                )
+            }
+        }
+    }
+}
+
+private fun isAccessibilityServiceEnabled(context: Context): Boolean {
+    val accessibilityManager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+    val enabledServices = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+
+    val serviceName = "${context.packageName}/${AutoRecordService::class.java.canonicalName}"
+    return enabledServices.contains(serviceName)
 }
 
 @Composable

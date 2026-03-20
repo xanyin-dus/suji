@@ -226,4 +226,13 @@ class HomeViewModel @Inject constructor(
             monthEndTime = getMonthEndTime(year, month)
         )
     }
+
+    fun selectMonth(year: Int, month: Int) {
+        _uiState.value = _uiState.value.copy(
+            currentYear = year,
+            currentMonth = month,
+            monthStartTime = getMonthStartTime(year, month),
+            monthEndTime = getMonthEndTime(year, month)
+        )
+    }
 }
