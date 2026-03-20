@@ -9,6 +9,8 @@ import com.suji.accountbook.data.local.entity.AccountBookEntity
 import com.suji.accountbook.data.local.entity.RecordType
 import com.suji.accountbook.data.repository.AccountBookRepository
 import com.suji.accountbook.data.repository.RecordRepository
+import com.suji.accountbook.service.AIService
+import com.suji.accountbook.util.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +31,12 @@ data class AnalysisUiState(
     val customEndTime: Long? = null
 )
 
+data class AIAnalysisState(
+    val isLoading: Boolean = false,
+    val result: String? = null,
+    val error: String? = null
+)
+
 enum class TimeRange {
     WEEK, MONTH, YEAR, CUSTOM
 }
@@ -36,11 +44,16 @@ enum class TimeRange {
 @HiltViewModel
 class AnalysisViewModel @Inject constructor(
     private val recordRepository: RecordRepository,
-    private val accountBookRepository: AccountBookRepository
+    private val accountBookRepository: AccountBookRepository,
+    private val aiService: AIService,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AnalysisUiState())
     val uiState: StateFlow<AnalysisUiState> = _uiState.asStateFlow()
+
+    private val _aiAnalysisState = MutableStateFlow(AIAnalysisState())
+    val aiAnalysisState: StateFlow<AIAnalysisState> = _aiAnalysisState.asStateFlow()
 
     val accountBooks: StateFlow<List<AccountBookEntity>> = accountBookRepository
         .getAllAccountBooks()
@@ -165,5 +178,67 @@ class AnalysisViewModel @Inject constructor(
             customStartTime = startTime,
             customEndTime = endTime
         )
+    }
+
+    fun runAIAnalysis() {
+        val apiKey = preferencesManager.aiApiKey
+        val apiEndpoint = preferencesManager.aiApiEndpoint
+
+        if (apiKey.isBlank()) {
+            _aiAnalysisState.value = AIAnalysisState(
+                error = "请先在设置中配置API密钥"
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _aiAnalysisState.value = AIAnalysisState(isLoading = true)
+
+            val expenseStats = expenseCategoryStats.value
+            val incomeStats = incomeCategoryStats.value
+            val daily = dailyStats.value
+
+            if (expenseStats.isEmpty() && incomeStats.isEmpty()) {
+                _aiAnalysisState.value = AIAnalysisState(
+                    error = "暂无数据可供分析"
+                )
+                return@launch
+            }
+
+            val dataBuilder = StringBuilder()
+            dataBuilder.append("=== 消费数据分析 ===\n\n")
+            
+            dataBuilder.append("【支出分类统计】\n")
+            expenseStats.forEach { stat ->
+                dataBuilder.append("- ${stat.categoryName ?: "未分类"}: ¥${String.format("%.2f", stat.totalAmount)}\n")
+            }
+
+            dataBuilder.append("\n【收入分类统计】\n")
+            incomeStats.forEach { stat ->
+                dataBuilder.append("- ${stat.categoryName ?: "未分类"}: ¥${String.format("%.2f", stat.totalAmount)}\n")
+            }
+
+            dataBuilder.append("\n【近期收支趋势】\n")
+            daily.takeLast(7).forEach { stat ->
+                dataBuilder.append("- ${stat.day}: 支出¥${String.format("%.2f", stat.expense)}, 收入¥${String.format("%.2f", stat.income)}\n")
+            }
+
+            val result = aiService.analyzeExpenses(
+                apiKey = apiKey,
+                apiEndpoint = apiEndpoint,
+                expenseData = dataBuilder.toString()
+            )
+
+            result.fold(
+                onSuccess = { analysis ->
+                    _aiAnalysisState.value = AIAnalysisState(result = analysis)
+                },
+                onFailure = { error ->
+                    _aiAnalysisState.value = AIAnalysisState(
+                        error = "分析失败: ${error.message}"
+                    )
+                }
+            )
+        }
     }
 }

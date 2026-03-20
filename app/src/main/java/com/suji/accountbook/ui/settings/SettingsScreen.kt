@@ -48,7 +48,8 @@ import com.suji.accountbook.ui.theme.PrimaryLight
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToAbout: () -> Unit
+    onNavigateToAbout: () -> Unit,
+    onNavigateToAISettings: () -> Unit
 ) {
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     val isAutoRecordEnabled by viewModel.isAutoRecordEnabled.collectAsState()
@@ -104,7 +105,7 @@ fun SettingsScreen(
                     icon = Icons.Default.Psychology,
                     title = "AI分析设置",
                     subtitle = "配置AI大模型API",
-                    onClick = { }
+                    onClick = onNavigateToAISettings
                 )
             }
 

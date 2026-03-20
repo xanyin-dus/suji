@@ -16,16 +16,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.suji.accountbook.ui.about.AboutScreen
 import com.suji.accountbook.ui.analysis.AnalysisScreen
 import com.suji.accountbook.ui.home.HomeScreen
 import com.suji.accountbook.ui.record.AddRecordScreen
 import com.suji.accountbook.ui.record.EditRecordScreen
 import com.suji.accountbook.ui.record.RecordScreen
+import com.suji.accountbook.ui.settings.AISettingsScreen
 import com.suji.accountbook.ui.settings.SettingsScreen
 
 private val bottomNavRoutes = listOf("Home", "Record", "Analysis", "Settings")
@@ -53,7 +56,12 @@ fun SujiNavHost(
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(navController = navController)
+            BottomNavigationBar(
+                navController = navController,
+                onAddRecordClick = {
+                    navController.navigate(Screen.AddRecord.routeKey)
+                }
+            )
         }
     ) { paddingValues ->
         Box(
@@ -148,8 +156,15 @@ fun SujiNavHost(
                     )
                 }
 
-                composable(route = Screen.EditRecordBaseRoute) {
+                composable(
+                    route = "EditRecord/{recordId}",
+                    arguments = listOf(
+                        navArgument("recordId") { type = NavType.LongType }
+                    )
+                ) { backStackEntry ->
+                    val recordId = backStackEntry.arguments?.getLong("recordId") ?: -1L
                     EditRecordScreen(
+                        recordId = recordId,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -163,7 +178,14 @@ fun SujiNavHost(
                 composable(route = Screen.Settings.routeKey) {
                     SettingsScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onNavigateToAbout = { navController.navigate(Screen.About.routeKey) }
+                        onNavigateToAbout = { navController.navigate(Screen.About.routeKey) },
+                        onNavigateToAISettings = { navController.navigate(Screen.AISettings.routeKey) }
+                    )
+                }
+
+                composable(route = Screen.AISettings.routeKey) {
+                    AISettingsScreen(
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 

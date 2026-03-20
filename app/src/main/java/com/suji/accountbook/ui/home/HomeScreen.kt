@@ -20,18 +20,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,12 +47,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.suji.accountbook.data.local.entity.RecordEntity
 import com.suji.accountbook.data.local.entity.RecordType
 import com.suji.accountbook.ui.theme.ExpenseColor
 import com.suji.accountbook.ui.theme.IncomeColor
 import com.suji.accountbook.ui.theme.PrimaryLight
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -64,47 +66,33 @@ fun HomeScreen(
 ) {
     val totalIncome by viewModel.totalIncome.collectAsState()
     val totalExpense by viewModel.totalExpense.collectAsState()
-    val records by viewModel.records.collectAsState()
+    val recordsWithCategory by viewModel.recordsWithCategory.collectAsState()
     val accountBooks by viewModel.accountBooks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(
-        modifier = Modifier.fillMaxSize()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            HomeHeader(
-                totalIncome = totalIncome,
-                totalExpense = totalExpense,
-                onNavigateToAnalysis = onNavigateToAnalysis,
-                onNavigateToSettings = onNavigateToSettings
-            )
+        HomeHeader(
+            totalIncome = totalIncome,
+            totalExpense = totalExpense,
+            currentYear = uiState.currentYear,
+            currentMonth = uiState.currentMonth,
+            onPreviousMonth = { viewModel.previousMonth() },
+            onNextMonth = { viewModel.nextMonth() },
+            onNavigateToAnalysis = onNavigateToAnalysis,
+            onNavigateToSettings = onNavigateToSettings
+        )
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-            RecordList(
-                records = records,
-                onRecordClick = { },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        FloatingActionButton(
-            onClick = onNavigateToAddRecord,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = PrimaryLight
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "添加记录",
-                tint = Color.White
-            )
-        }
+        RecordList(
+            recordsWithCategory = recordsWithCategory,
+            onRecordClick = { },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -112,10 +100,17 @@ fun HomeScreen(
 private fun HomeHeader(
     totalIncome: Double,
     totalExpense: Double,
+    currentYear: Int,
+    currentMonth: Int,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
     onNavigateToAnalysis: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val balance = totalIncome - totalExpense
+    val monthNames = listOf("一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月")
+    val calendar = Calendar.getInstance()
+    val isCurrentMonth = currentYear == calendar.get(Calendar.YEAR) && currentMonth == calendar.get(Calendar.MONTH)
 
     Box(
         modifier = Modifier
@@ -131,16 +126,78 @@ private fun HomeHeader(
             .padding(24.dp)
     ) {
         Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = onPreviousMonth,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowLeft,
+                            contentDescription = "上个月",
+                            tint = Color.White
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = "${currentYear}年",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = monthNames[currentMonth],
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onNextMonth,
+                        modifier = Modifier.size(36.dp),
+                        enabled = !isCurrentMonth
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = "下个月",
+                            tint = if (isCurrentMonth) Color.White.copy(alpha = 0.3f) else Color.White
+                        )
+                    }
+                }
+
+                if (!isCurrentMonth) {
+                    Text(
+                        text = "本月",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
-                text = "本月概览",
-                style = MaterialTheme.typography.titleMedium,
+                text = if (balance >= 0) "结余" else "超支",
+                style = MaterialTheme.typography.titleSmall,
                 color = Color.White.copy(alpha = 0.8f)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = String.format("¥ %.2f", balance),
+                text = String.format("¥ %.2f", kotlin.math.abs(balance)),
                 style = MaterialTheme.typography.displaySmall,
                 color = Color.White,
                 fontWeight = FontWeight.Bold
@@ -219,40 +276,49 @@ private fun StatItem(
 
 @Composable
 private fun RecordList(
-    records: List<RecordEntity>,
-    onRecordClick: (RecordEntity) -> Unit,
+    recordsWithCategory: List<RecordWithCategory>,
+    onRecordClick: (RecordWithCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dateFormat = SimpleDateFormat("MM-dd", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val dayOfWeekNames = listOf("周日", "周一", "周二", "周三", "周四", "周五", "周六")
 
-    val groupedRecords = records.groupBy { record ->
-        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(record.date))
-    }
+    val groupedRecords = recordsWithCategory.groupBy { item ->
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(item.record.date))
+    }.toSortedMap(reverseOrder())
 
     Column(
         modifier = modifier.fillMaxWidth()
     ) {
         Text(
-            text = "本月记录",
+            text = "记账记录",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (records.isEmpty()) {
+        if (recordsWithCategory.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "暂无记录",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "暂无记录",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "点击下方按钮开始记账",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -260,15 +326,93 @@ private fun RecordList(
             ) {
                 groupedRecords.forEach { (date, dateRecords) ->
                     item {
-                        Text(
-                            text = date,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        val parsedDate = dateFormat.parse(date)
+                        val calendar = Calendar.getInstance()
+                        if (parsedDate != null) {
+                            calendar.time = parsedDate
+                        }
+                        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+                        val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
+                        val month = calendar.get(Calendar.MONTH) + 1
+                        
+                        val today = Calendar.getInstance()
+                        val isToday = calendar.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+                                calendar.get(Calendar.MONTH) == today.get(Calendar.MONTH) &&
+                                calendar.get(Calendar.DAY_OF_MONTH) == today.get(Calendar.DAY_OF_MONTH)
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isToday) PrimaryLight.copy(alpha = 0.1f)
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "$dayOfMonth",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isToday) PrimaryLight else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = "${month}月${dayOfMonth}日 ${dayOfWeekNames[dayOfWeek - 1]}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (isToday) {
+                                    Text(
+                                        text = "今天",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = PrimaryLight
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            val dayIncome = dateRecords.filter { it.record.type == RecordType.INCOME }.sumOf { it.record.amount }
+                            val dayExpense = dateRecords.filter { it.record.type == RecordType.EXPENSE }.sumOf { it.record.amount }
+
+                            Column(
+                                horizontalAlignment = Alignment.End
+                            ) {
+                                if (dayIncome > 0) {
+                                    Text(
+                                        text = String.format("+¥%.0f", dayIncome),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = IncomeColor
+                                    )
+                                }
+                                if (dayExpense > 0) {
+                                    Text(
+                                        text = String.format("-¥%.0f", dayExpense),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = ExpenseColor
+                                    )
+                                }
+                            }
+                        }
                     }
 
-                    items(dateRecords) { record ->
+                    items(dateRecords) { item ->
                         AnimatedVisibility(
                             visible = true,
                             enter = fadeIn() + scaleIn(
@@ -280,8 +424,8 @@ private fun RecordList(
                             exit = fadeOut() + scaleOut()
                         ) {
                             RecordItem(
-                                record = record,
-                                onClick = { onRecordClick(record) }
+                                recordWithCategory = item,
+                                onClick = { onRecordClick(item) }
                             )
                         }
                     }
@@ -293,11 +437,22 @@ private fun RecordList(
 
 @Composable
 private fun RecordItem(
-    record: RecordEntity,
+    recordWithCategory: RecordWithCategory,
     onClick: () -> Unit
 ) {
+    val record = recordWithCategory.record
+    val category = recordWithCategory.category
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     val isExpense = record.type == RecordType.EXPENSE
+
+    val iconText = category?.icon ?: if (isExpense) "支" else "收"
+    val categoryName = category?.name ?: if (isExpense) "支出" else "收入"
+    val categoryColor = try {
+        category?.color?.let { Color(android.graphics.Color.parseColor(it)) }
+            ?: if (isExpense) ExpenseColor else IncomeColor
+    } catch (e: Exception) {
+        if (isExpense) ExpenseColor else IncomeColor
+    }
 
     Card(
         modifier = Modifier
@@ -322,16 +477,13 @@ private fun RecordItem(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (isExpense) ExpenseColor.copy(alpha = 0.1f)
-                        else IncomeColor.copy(alpha = 0.1f)
-                    ),
+                    .background(categoryColor.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = record.remark.take(1).ifEmpty { if (isExpense) "支" else "收" },
+                    text = iconText,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isExpense) ExpenseColor else IncomeColor
+                    color = categoryColor
                 )
             }
 
@@ -341,15 +493,29 @@ private fun RecordItem(
                     .padding(start = 12.dp)
             ) {
                 Text(
-                    text = record.remark.ifEmpty { if (isExpense) "支出" else "收入" },
+                    text = record.remark.ifEmpty { categoryName },
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = timeFormat.format(Date(record.date)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = categoryName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = categoryColor.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = " · ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
+                    Text(
+                        text = timeFormat.format(Date(record.date)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             }
 
             Text(
