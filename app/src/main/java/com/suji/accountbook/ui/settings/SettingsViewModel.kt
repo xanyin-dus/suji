@@ -1,13 +1,9 @@
 package com.suji.accountbook.ui.settings
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.suji.accountbook.util.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -15,23 +11,14 @@ class SettingsViewModel @Inject constructor(
     private val preferencesManager: PreferencesManager
 ) : ViewModel() {
     
-    private val _isDarkMode = MutableStateFlow(preferencesManager.isDarkMode)
-    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
-    
-    private val _isAutoRecordEnabled = MutableStateFlow(preferencesManager.isAutoRecordEnabled)
-    val isAutoRecordEnabled: StateFlow<Boolean> = _isAutoRecordEnabled.asStateFlow()
+    val isDarkMode: StateFlow<Boolean> = preferencesManager.isDarkModeFlow
+    val isAutoRecordEnabled: StateFlow<Boolean> = preferencesManager.isAutoRecordEnabledFlow
     
     fun setDarkMode(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesManager.isDarkMode = enabled
-            _isDarkMode.value = enabled
-        }
+        preferencesManager.isDarkMode = enabled
     }
     
     fun setAutoRecordEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            preferencesManager.isAutoRecordEnabled = enabled
-            _isAutoRecordEnabled.value = enabled
-        }
+        preferencesManager.isAutoRecordEnabled = enabled
     }
 }

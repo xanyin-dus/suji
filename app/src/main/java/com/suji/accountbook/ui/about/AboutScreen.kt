@@ -1,5 +1,7 @@
 package com.suji.accountbook.ui.about
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -119,7 +121,7 @@ fun AboutScreen(
                 )
 
                 Text(
-                    text = "版本 1.1.0",
+                    text = "版本 1.3.0",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
@@ -169,9 +171,13 @@ fun AboutScreen(
                         AboutItem(
                             icon = Icons.Default.Email,
                             title = "反馈建议",
-                            subtitle = "联系我们",
+                            subtitle = "QQ群: 830594886",
                             onClick = {
-                                openQQGroup(context, "830594886")
+                                copyToClipboard(context, "830594886")
+                                toastMessage = ToastMessage(
+                                    message = "群号已复制: 830594886",
+                                    type = ToastType.SUCCESS
+                                )
                             }
                         )
 
@@ -218,20 +224,10 @@ private fun openUrl(context: Context, url: String) {
     }
 }
 
-private fun openQQGroup(context: Context, groupId: String) {
-    try {
-        val intent = Intent()
-        intent.action = Intent.ACTION_VIEW
-        intent.data = Uri.parse("mqqopensdkapi://bizAgent/qm/qr?url=http%3A%2F%2Fqm.qq.com%2Fcgi-bin%2Fqm%2Fqr%3Ffrom%3Dapp%26p%3Dandroid%26jump_from%3Dwebapi%26k%3D$groupId")
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://qm.qq.com/cgi-bin/qm/qr?k=$groupId"))
-            context.startActivity(intent)
-        } catch (e2: Exception) {
-            e2.printStackTrace()
-        }
-    }
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("QQ群号", text)
+    clipboardManager.setPrimaryClip(clip)
 }
 
 @Composable

@@ -13,9 +13,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 data class AIAnalysisRequest(
-    val model: String = "gpt-3.5-turbo",
+    val model: String = "Qwen/Qwen2.5-7B-Instruct",
     val messages: List<Message>,
-    val temperature: Double = 0.7
+    val temperature: Double = 0.7,
+    val max_tokens: Int = 2000
 )
 
 data class Message(
@@ -47,9 +48,9 @@ class AIService @Inject constructor(
     private val gson: Gson
 ) {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     suspend fun analyzeExpenses(
@@ -71,7 +72,7 @@ class AIService @Inject constructor(
             """.trimIndent()
 
             val request = AIAnalysisRequest(
-                model = "gpt-3.5-turbo",
+                model = "Qwen/Qwen2.5-7B-Instruct",
                 messages = listOf(
                     Message(role = "system", content = systemPrompt),
                     Message(role = "user", content = "以下是我的消费数据：\n$expenseData")
@@ -81,8 +82,15 @@ class AIService @Inject constructor(
             val requestBody = gson.toJson(request)
                 .toRequestBody("application/json".toMediaType())
 
+            val baseUrl = apiEndpoint.trimEnd('/')
+            val url = if (baseUrl.endsWith("/v1")) {
+                "$baseUrl/chat/completions"
+            } else {
+                "$baseUrl/v1/chat/completions"
+            }
+
             val httpRequest = Request.Builder()
-                .url("$apiEndpoint/v1/chat/completions")
+                .url(url)
                 .addHeader("Authorization", "Bearer $apiKey")
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody)
@@ -92,6 +100,10 @@ class AIService @Inject constructor(
 
             if (response.isSuccessful) {
                 val responseBody = response.body?.string()
+                if (responseBody.isNullOrBlank()) {
+                    return@withContext Result.failure(Exception("响应体为空"))
+                }
+                
                 val aiResponse = gson.fromJson(responseBody, AIAnalysisResponse::class.java)
                 
                 if (aiResponse.error != null) {
@@ -105,10 +117,11 @@ class AIService @Inject constructor(
                     }
                 }
             } else {
-                Result.failure(Exception("请求失败: ${response.code}"))
+                val errorBody = response.body?.string() ?: "未知错误"
+                Result.failure(Exception("请求失败(${response.code}): $errorBody"))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("网络请求异常: ${e.message}"))
         }
     }
 
@@ -120,7 +133,7 @@ class AIService @Inject constructor(
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val request = AIAnalysisRequest(
-                model = "gpt-3.5-turbo",
+                model = "Qwen/Qwen2.5-7B-Instruct",
                 messages = listOf(
                     Message(role = "user", content = "$prompt\n\n数据：\n$data")
                 )
@@ -129,8 +142,15 @@ class AIService @Inject constructor(
             val requestBody = gson.toJson(request)
                 .toRequestBody("application/json".toMediaType())
 
+            val baseUrl = apiEndpoint.trimEnd('/')
+            val url = if (baseUrl.endsWith("/v1")) {
+                "$baseUrl/chat/completions"
+            } else {
+                "$baseUrl/v1/chat/completions"
+            }
+
             val httpRequest = Request.Builder()
-                .url("$apiEndpoint/v1/chat/completions")
+                .url(url)
                 .addHeader("Authorization", "Bearer $apiKey")
                 .addHeader("Content-Type", "application/json")
                 .post(requestBody)

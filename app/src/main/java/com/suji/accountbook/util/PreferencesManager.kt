@@ -3,6 +3,9 @@ package com.suji.accountbook.util
 import android.content.Context
 import android.content.SharedPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -11,14 +14,26 @@ class PreferencesManager @Inject constructor(
     @ApplicationContext context: Context
 ) {
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    
+    private val _isDarkModeFlow = MutableStateFlow(prefs.getBoolean(KEY_DARK_MODE, false))
+    val isDarkModeFlow: StateFlow<Boolean> = _isDarkModeFlow.asStateFlow()
+    
+    private val _isAutoRecordEnabledFlow = MutableStateFlow(prefs.getBoolean(KEY_AUTO_RECORD, false))
+    val isAutoRecordEnabledFlow: StateFlow<Boolean> = _isAutoRecordEnabledFlow.asStateFlow()
 
     var isDarkMode: Boolean
         get() = prefs.getBoolean(KEY_DARK_MODE, false)
-        set(value) = prefs.edit().putBoolean(KEY_DARK_MODE, value).apply()
+        set(value) {
+            prefs.edit().putBoolean(KEY_DARK_MODE, value).apply()
+            _isDarkModeFlow.value = value
+        }
 
     var isAutoRecordEnabled: Boolean
         get() = prefs.getBoolean(KEY_AUTO_RECORD, false)
-        set(value) = prefs.edit().putBoolean(KEY_AUTO_RECORD, value).apply()
+        set(value) {
+            prefs.edit().putBoolean(KEY_AUTO_RECORD, value).apply()
+            _isAutoRecordEnabledFlow.value = value
+        }
 
     var aiApiKey: String
         get() = prefs.getString(KEY_AI_API_KEY, "") ?: ""
