@@ -36,9 +36,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +75,8 @@ fun HomeScreen(
     val accountBooks by viewModel.accountBooks.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
+    var showMonthPicker by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -82,6 +89,7 @@ fun HomeScreen(
             currentMonth = uiState.currentMonth,
             onPreviousMonth = { viewModel.previousMonth() },
             onNextMonth = { viewModel.nextMonth() },
+            onMonthClick = { showMonthPicker = true },
             onNavigateToAnalysis = onNavigateToAnalysis,
             onNavigateToSettings = onNavigateToSettings
         )
@@ -94,6 +102,18 @@ fun HomeScreen(
             modifier = Modifier.weight(1f)
         )
     }
+
+    if (showMonthPicker) {
+        MonthPickerDialog(
+            currentYear = uiState.currentYear,
+            currentMonth = uiState.currentMonth,
+            onDismiss = { showMonthPicker = false },
+            onMonthSelected = { year, month ->
+                viewModel.selectMonth(year, month)
+                showMonthPicker = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -104,6 +124,7 @@ private fun HomeHeader(
     currentMonth: Int,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onMonthClick: () -> Unit,
     onNavigateToAnalysis: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
@@ -131,97 +152,67 @@ private fun HomeHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    horizontalAlignment = Alignment.Start,
+                    modifier = Modifier.clickable(onClick = onMonthClick)
                 ) {
-                    IconButton(
-                        onClick = onPreviousMonth,
-                        modifier = Modifier.size(36.dp)
+                    Text(
+                        text = "${currentYear}年",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "上个月",
-                            tint = Color.White
-                        )
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    ) {
-                        Text(
-                            text = "${currentYear}年",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
                         Text(
                             text = monthNames[currentMonth],
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
-                    }
-
-                    IconButton(
-                        onClick = onNextMonth,
-                        modifier = Modifier.size(36.dp),
-                        enabled = !isCurrentMonth
-                    ) {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowRight,
-                            contentDescription = "下个月",
-                            tint = if (isCurrentMonth) Color.White.copy(alpha = 0.3f) else Color.White
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "选择月份",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
 
-                if (!isCurrentMonth) {
-                    Text(
-                        text = "本月",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "收入",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = String.format("%.2f", totalIncome),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                        )
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "支出",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = String.format("%.2f", totalExpense),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                        )
+                    }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = if (balance >= 0) "结余" else "超支",
-                style = MaterialTheme.typography.titleSmall,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-
-            Text(
-                text = String.format("¥ %.2f", kotlin.math.abs(balance)),
-                style = MaterialTheme.typography.displaySmall,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                StatItem(
-                    title = "收入",
-                    amount = totalIncome,
-                    icon = Icons.Default.KeyboardArrowUp,
-                    color = IncomeColor
-                )
-
-                StatItem(
-                    title = "支出",
-                    amount = totalExpense,
-                    icon = Icons.Default.KeyboardArrowDown,
-                    color = ExpenseColor
-                )
             }
         }
     }
@@ -347,36 +338,24 @@ private fun RecordList(
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isToday) PrimaryLight.copy(alpha = 0.1f)
-                                        else MaterialTheme.colorScheme.surfaceVariant
-                                    ),
-                                contentAlignment = Alignment.Center
+                            Column(
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "$dayOfMonth",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isToday) PrimaryLight else MaterialTheme.colorScheme.onSurface
+                                        text = "${month}月${dayOfMonth}日",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = dayOfWeekNames[dayOfWeek - 1],
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                     )
                                 }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Text(
-                                    text = "${month}月${dayOfMonth}日 ${dayOfWeekNames[dayOfWeek - 1]}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
                                 if (isToday) {
                                     Text(
                                         text = "今天",
@@ -386,29 +365,14 @@ private fun RecordList(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            val dayIncome = dateRecords.filter { it.record.type == RecordType.INCOME }.sumOf { it.record.amount }
                             val dayExpense = dateRecords.filter { it.record.type == RecordType.EXPENSE }.sumOf { it.record.amount }
 
-                            Column(
-                                horizontalAlignment = Alignment.End
-                            ) {
-                                if (dayIncome > 0) {
-                                    Text(
-                                        text = String.format("+¥%.0f", dayIncome),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = IncomeColor
-                                    )
-                                }
-                                if (dayExpense > 0) {
-                                    Text(
-                                        text = String.format("-¥%.0f", dayExpense),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = ExpenseColor
-                                    )
-                                }
-                            }
+                            Text(
+                                text = String.format("-¥%.0f", dayExpense),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = ExpenseColor
+                            )
                         }
                     }
 
@@ -520,7 +484,7 @@ private fun RecordItem(
 
             Text(
                 text = String.format(
-                    "%s¥ %.2f",
+                    "%s%.0f",
                     if (isExpense) "-" else "+",
                     record.amount
                 ),
@@ -530,4 +494,109 @@ private fun RecordItem(
             )
         }
     }
+}
+
+@Composable
+private fun MonthPickerDialog(
+    currentYear: Int,
+    currentMonth: Int,
+    onDismiss: () -> Unit,
+    onMonthSelected: (Int, Int) -> Unit
+) {
+    val monthNames = listOf("一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月")
+    val calendar = Calendar.getInstance()
+    val currentYearNow = calendar.get(Calendar.YEAR)
+    
+    var selectedYear by remember { mutableStateOf(currentYear) }
+    var selectedMonth by remember { mutableStateOf(currentMonth) }
+    
+    val years = (currentYearNow - 5..currentYearNow + 1).toList()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("选择月份") },
+        text = {
+            Column {
+                Text(
+                    text = "年份",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    years.forEach { year ->
+                        TextButton(
+                            onClick = { selectedYear = year },
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(
+                                    if (year == selectedYear) PrimaryLight.copy(alpha = 0.1f)
+                                    else Color.Transparent,
+                                    RoundedCornerShape(8.dp)
+                                )
+                        ) {
+                            Text(
+                                text = "${year}年",
+                                color = if (year == selectedYear) PrimaryLight
+                                    else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "月份",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    monthNames.chunked(4).forEach { monthChunk ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            monthChunk.forEachIndexed { index, monthName ->
+                                val monthIndex = monthNames.indexOf(monthName)
+                                TextButton(
+                                    onClick = { selectedMonth = monthIndex },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(
+                                            if (monthIndex == selectedMonth) PrimaryLight.copy(alpha = 0.1f)
+                                            else Color.Transparent,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                ) {
+                                    Text(
+                                        text = monthName,
+                                        color = if (monthIndex == selectedMonth) PrimaryLight
+                                            else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onMonthSelected(selectedYear, selectedMonth) }) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

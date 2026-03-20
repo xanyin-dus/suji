@@ -48,9 +48,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +87,13 @@ fun AddRecordScreen(
     val accountBooks by viewModel.accountBooks.collectAsState()
 
     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.saveSuccess) {
+        if (uiState.saveSuccess) {
+            onNavigateBack()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -156,7 +170,7 @@ fun AddRecordScreen(
                     text = "日期",
                     style = MaterialTheme.typography.bodyLarge
                 )
-                TextButton(onClick = { }) {
+                TextButton(onClick = { showDatePicker = true }) {
                     Text(dateFormat.format(Date(uiState.date)))
                 }
             }
@@ -182,10 +196,34 @@ fun AddRecordScreen(
                     Text("保存", fontSize = 16.sp)
                 }
             }
+        }
+    }
 
-            if (uiState.saveSuccess) {
-                onNavigateBack()
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = uiState.date
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            viewModel.setDate(it)
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("取消")
+                }
             }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
