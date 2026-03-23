@@ -36,6 +36,7 @@
     <string name="open_source_license">开源许可</string>
     <string name="auto_record_service">自动记账服务</string>
     <string name="auto_record_desc">开启后可自动识别微信、支付宝付款信息</string>
+    <string name="auto_record_summary">监听微信、支付宝支付通知，自动记录消费信息</string>
     <string name="pending_remarks">待备注列表</string>
     <string name="no_data">暂无数据</string>
     <string name="add_record">添加记录</string>
