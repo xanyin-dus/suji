@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewTextChanged|typeViewTextSelectionChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents"
+    android:accessibilityFlags="flagDefault|flagRequestFilterKeyEvents|flagReportViewIds|flagIncludeNotImportantViews"
     android:canRetrieveWindowContent="true"
     android:description="@string/auto_record_desc"
-    android:notificationTimeout="100"
-    android:settingsActivity="com.suji.accountbook.MainActivity">
-    <accessibility-service-targets>
-        <package-name android:name="com.tencent.mm" />
-        <package-name android:name="com.eg.android.AlipayGphone" />
-    </accessibility-service-targets>
+    android:notificationTimeout="50"
+    android:settingsActivity="com.suji.accountbook.MainActivity"
+    android:summary="@string/auto_record_summary">
 </accessibility-service>

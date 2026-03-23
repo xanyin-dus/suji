@@ -1,9 +1,14 @@
 package com.suji.accountbook.ui.settings
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -22,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
@@ -45,6 +49,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +60,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.suji.accountbook.R
 import com.suji.accountbook.service.AutoRecordService
@@ -72,6 +80,25 @@ fun SettingsScreen(
     val isAutoRecordEnabled by viewModel.isAutoRecordEnabled.collectAsState()
     val context = LocalContext.current
     val isAccessibilityEnabled = isAccessibilityServiceEnabled(context)
+
+    var hasNotificationPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        )
+    }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasNotificationPermission = isGranted
+    }
 
     Scaffold(
         topBar = {
@@ -111,9 +138,15 @@ fun SettingsScreen(
                 AutoRecordSettingsItem(
                     isAutoRecordEnabled = isAutoRecordEnabled,
                     isAccessibilityEnabled = isAccessibilityEnabled,
+                    hasNotificationPermission = hasNotificationPermission,
                     onToggleAutoRecord = { viewModel.setAutoRecordEnabled(it) },
                     onOpenAccessibilitySettings = {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    },
+                    onRequestNotificationPermission = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
                     }
                 )
             }
@@ -179,8 +212,10 @@ fun SettingsScreen(
 private fun AutoRecordSettingsItem(
     isAutoRecordEnabled: Boolean,
     isAccessibilityEnabled: Boolean,
+    hasNotificationPermission: Boolean,
     onToggleAutoRecord: (Boolean) -> Unit,
-    onOpenAccessibilitySettings: () -> Unit
+    onOpenAccessibilitySettings: () -> Unit,
+    onRequestNotificationPermission: () -> Unit
 ) {
     Column(
         modifier = Modifier.padding(16.dp)
@@ -224,7 +259,7 @@ private fun AutoRecordSettingsItem(
             )
         }
 
-        if (isAutoRecordEnabled && !isAccessibilityEnabled) {
+        if (!isAccessibilityEnabled) {
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier
@@ -249,6 +284,34 @@ private fun AutoRecordSettingsItem(
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = onOpenAccessibilitySettings) {
+                    Text("去开启", color = ExpenseColor)
+                }
+            }
+        } else if (!hasNotificationPermission) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(ExpenseColor.copy(alpha = 0.1f))
+                    .clickable { onRequestNotificationPermission() }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = ExpenseColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "请开启通知权限以接收记账提醒",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ExpenseColor,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = onRequestNotificationPermission) {
                     Text("去开启", color = ExpenseColor)
                 }
             }
